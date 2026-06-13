@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Devin Remediation Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    h1 span { color: #7c3aed; }
+
+    .controls {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: opacity 0.15s;
+    }
+    button:hover { opacity: 0.85; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-scan { background: #7c3aed; color: #fff; }
+    .btn-retry { background: #1e40af; color: #fff; }
+
+    .last-updated {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .summary {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .card {
+      background: #1e2130;
+      border: 1px solid #2d3748;
+      border-radius: 8px;
+      padding: 1rem 1.5rem;
+      min-width: 120px;
+    }
+
+    .card .count {
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .card .label {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-top: 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .card.pending   .count { color: #f59e0b; }
+    .card.running   .count { color: #3b82f6; }
+    .card.completed .count { color: #10b981; }
+    .card.failed    .count { color: #ef4444; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+
+    thead th {
+      text-align: left;
+      padding: 0.6rem 0.75rem;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #64748b;
+      border-bottom: 1px solid #2d3748;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid #1a1f2e;
+      transition: background 0.1s;
+    }
+
+    tbody tr:hover { background: #1a1f2e; }
+
+    td {
+      padding: 0.75rem;
+      vertical-align: middle;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-pending   { background: #451a03; color: #fbbf24; }
+    .badge-running   { background: #1e3a8a; color: #93c5fd; }
+    .badge-completed { background: #064e3b; color: #6ee7b7; }
+    .badge-failed    { background: #450a0a; color: #fca5a5; }
+
+    a { color: #818cf8; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .empty {
+      text-align: center;
+      padding: 3rem;
+      color: #475569;
+    }
+
+    .pulse {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #3b82f6;
+      animation: pulse 1.5s ease-in-out infinite;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Devin <span>Remediation</span> Dashboard</h1>
+    <div class="controls">
+      <span class="last-updated" id="lastUpdated">—</span>
+      <button class="btn-scan" id="btnScan" onclick="triggerScan(false)">Scan Issues</button>
+      <button class="btn-retry" id="btnRetry" onclick="triggerScan(true)">Retry Failed</button>
+    </div>
+  </header>
+
+  <div class="summary" id="summary"></div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Issue</th>
+        <th>Status</th>
+        <th>Devin Session</th>
+        <th>Pull Request</th>
+        <th>Started</th>
+        <th>Updated</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+
+  <script>
+    const POLL_MS = 5000;
+
+    function fmt(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
+    }
+
+    function badge(status) {
+      return `<span class="badge badge-${status}">${status}</span>`;
+    }
+
+    function renderSummary(rows) {
+      const counts = { pending: 0, running: 0, completed: 0, failed: 0 };
+      rows.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
+      const el = document.getElementById('summary');
+      el.innerHTML = Object.entries(counts).map(([k, v]) =>
+        `<div class="card ${k}"><div class="count">${v}</div><div class="label">${k}</div></div>`
+      ).join('');
+    }
+
+    function renderTable(rows) {
+      const tbody = document.getElementById('tbody');
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty">No issues tracked yet. Click "Scan Issues" to start.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map(r => `
+        <tr>
+          <td><a href="${r.issue_url}" target="_blank">#${r.issue_number}</a></td>
+          <td>${r.title}</td>
+          <td>${badge(r.status)}</td>
+          <td>${r.session_url
+            ? `<a href="${r.session_url}" target="_blank">${r.status === 'running' ? '<span class="pulse"></span>' : ''}${r.session_id ? r.session_id.slice(0,8) + '…' : 'View'}</a>`
+            : '—'}</td>
+          <td>${r.pr_url ? `<a href="${r.pr_url}" target="_blank">View PR</a>` : '—'}</td>
+          <td>${fmt(r.created_at)}</td>
+          <td>${fmt(r.updated_at)}</td>
+        </tr>
+      `).join('');
+    }
+
+    async function fetchStatus() {
+      try {
+        const res = await fetch('/status');
+        const rows = await res.json();
+        renderSummary(rows);
+        renderTable(rows);
+        document.getElementById('lastUpdated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+      } catch (e) {
+        console.error('Poll error:', e);
+      }
+    }
+
+    async function triggerScan(forceRetry) {
+      const btn = forceRetry ? document.getElementById('btnRetry') : document.getElementById('btnScan');
+      btn.disabled = true;
+      try {
+        await fetch(`/scan?force_retry=${forceRetry}`, { method: 'POST' });
+        await fetchStatus();
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    fetchStatus();
+    setInterval(fetchStatus, POLL_MS);
+  </script>
+</body>
+</html>
