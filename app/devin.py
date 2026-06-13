@@ -14,8 +14,8 @@ Issue description:
 
 Instructions:
 - Clone the repository and fix the issue described above.
-- Open a pull request with your fix. The PR title should reference the issue, e.g. "Fix #{issue_number}: {title}".
-- Make sure all existing tests pass.
+- Open a pull request with your fix. The PR title should reference the issue, e.g. "Fix #{issue_number}: {title}". The PR body must include the line "Closes #{issue_number}" so that GitHub automatically closes the issue when the PR is merged.
+- Make sure all existing tests pass and all pre-commit hooks pass.
 """
 
 
