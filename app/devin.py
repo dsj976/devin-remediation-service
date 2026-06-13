@@ -1,0 +1,90 @@
+import os
+from typing import Optional
+
+import httpx
+
+DEVIN_API = "https://api.devin.ai/v3"
+
+PROMPT_TEMPLATE = """You are working on the GitHub repository {repo}.
+
+Please fix issue #{issue_number}: "{title}".
+
+Issue description:
+{body}
+
+Instructions:
+- Clone the repository and fix the issue described above.
+- Open a pull request with your fix. The PR title should reference the issue, e.g. "Fix #{issue_number}: {title}".
+- Make sure all existing tests pass.
+"""
+
+
+def _headers() -> dict:
+    return {
+        "Authorization": f"Bearer {os.environ['DEVIN_API_KEY']}",
+        "Content-Type": "application/json",
+    }
+
+
+def _org_id() -> str:
+    return os.environ["DEVIN_ORG_ID"]
+
+
+def create_session(issue_number: int, title: str, body: str) -> dict:
+    """
+    Create a Devin session to fix the given issue.
+    Returns the full response dict (includes session_id and url).
+    """
+    repo = os.environ["GITHUB_REPO"]
+    prompt = PROMPT_TEMPLATE.format(
+        repo=repo,
+        issue_number=issue_number,
+        title=title,
+        body=body or "No additional description provided.",
+    )
+    payload = {"prompt": prompt}
+    with httpx.Client(timeout=30) as client:
+        resp = client.post(
+            f"{DEVIN_API}/organizations/{_org_id()}/sessions",
+            headers=_headers(),
+            json=payload,
+        )
+        resp.raise_for_status()
+    return resp.json()
+
+
+def get_session(session_id: str) -> dict:
+    """
+    Fetch the current state of a Devin session.
+    Returns the full response dict.
+    """
+    with httpx.Client(timeout=30) as client:
+        resp = client.get(
+            f"{DEVIN_API}/organizations/{_org_id()}/sessions/{session_id}",
+            headers=_headers(),
+        )
+        resp.raise_for_status()
+    return resp.json()
+
+
+def map_devin_status(devin_status: Optional[str]) -> str:
+    """Map Devin session status to our internal status.
+
+    Devin v3 terminal statuses: 'exit' (success), 'error', 'suspended'.
+    """
+    if devin_status is None:
+        return "running"
+    status_lower = devin_status.lower()
+    if status_lower == "exit":
+        return "completed"
+    if status_lower in ("error", "suspended"):
+        return "failed"
+    return "running"
+
+
+def extract_pr_url(session_data: dict) -> Optional[str]:
+    """Extract the first PR URL from a session response's pull_requests list."""
+    prs = session_data.get("pull_requests") or []
+    if prs:
+        return prs[0].get("pr_url")
+    return None
