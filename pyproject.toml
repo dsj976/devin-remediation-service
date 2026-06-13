@@ -1,0 +1,28 @@
+[project]
+name = "devin-superset-remediation"
+version = "1.0.0"
+description = "Event-driven automation that uses the Devin API to remediate code quality issues in Apache Superset"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "httpx>=0.27.0",
+    "jinja2>=3.1.0",
+    "aiosqlite>=0.20.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = ["ruff", "pytest", "pytest-asyncio"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
