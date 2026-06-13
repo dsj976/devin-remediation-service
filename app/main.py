@@ -26,10 +26,11 @@ TEMPLATES_DIR = Path(__file__).parent / "templates"
 def _process_issue(issue: dict, force_retry: bool = False) -> None:
     """
     Decide whether to create/retry a Devin session for a single issue.
-    - If a PR already exists on GitHub → mark completed, skip.
-    - If already completed in store → skip (unless force_retry=False is irrelevant here).
-    - If failed/pending in store (or not in store) → create session.
-    force_retry=True re-runs failed/pending entries.
+    - completed → always skip.
+    - open PR found on GitHub → mark completed, skip.
+    - running → always skip (never duplicate).
+    - failed → skip unless force_retry=True.
+    - not in store → create session.
     """
     number = issue["number"]
     title = issue["title"]
@@ -49,11 +50,15 @@ def _process_issue(issue: dict, force_retry: bool = False) -> None:
         store.upsert(number, title=title, issue_url=issue_url, status="completed", pr_url=pr_url)
         return
 
-    # 3. Currently running → don't spawn a duplicate
-    if current_status == "running" and not force_retry:
+    # 3. Currently running → never spawn a duplicate
+    if current_status == "running":
         return
 
-    # 4. Create a new Devin session
+    # 4. Failed → only retry when explicitly requested
+    if current_status == "failed" and not force_retry:
+        return
+
+    # 5. Create a new Devin session
     log.info("Creating Devin session for issue #%d: %s", number, title)
     store.upsert(number, title=title, issue_url=issue_url, status="running")
     try:
