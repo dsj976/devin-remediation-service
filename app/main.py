@@ -55,7 +55,7 @@ def _process_issue(issue: dict, force_retry: bool = False) -> None:
 
     # 4. Create a new Devin session
     log.info("Creating Devin session for issue #%d: %s", number, title)
-    store.upsert(number, title=title, issue_url=issue_url, status="pending")
+    store.upsert(number, title=title, issue_url=issue_url, status="running")
     try:
         result = devin.create_session(number, title, body)
         session_id = result.get("session_id") or result.get("id")

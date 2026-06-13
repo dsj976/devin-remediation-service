@@ -85,7 +85,6 @@
       letter-spacing: 0.05em;
     }
 
-    .card.pending   .count { color: #f59e0b; }
     .card.running   .count { color: #3b82f6; }
     .card.completed .count { color: #10b981; }
     .card.failed    .count { color: #ef4444; }
@@ -128,7 +127,6 @@
       letter-spacing: 0.04em;
     }
 
-    .badge-pending   { background: #451a03; color: #fbbf24; }
     .badge-running   { background: #1e3a8a; color: #93c5fd; }
     .badge-completed { background: #064e3b; color: #6ee7b7; }
     .badge-failed    { background: #450a0a; color: #fca5a5; }
@@ -200,7 +198,7 @@
     }
 
     function renderSummary(rows) {
-      const counts = { pending: 0, running: 0, completed: 0, failed: 0 };
+      const counts = { running: 0, completed: 0, failed: 0 };
       rows.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
       const el = document.getElementById('summary');
       el.innerHTML = Object.entries(counts).map(([k, v]) =>
