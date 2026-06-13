@@ -33,29 +33,40 @@ def get_labeled_issues() -> List[dict]:
 
 def find_existing_pr(issue_number: int) -> Optional[str]:
     """
-    Check the issue timeline for cross-referenced events from open PRs.
-    This is more reliable than text search — it only returns PRs that GitHub
-    explicitly linked to this issue (e.g. via 'Fixes #N' or the UI linker).
-    Closed/merged PRs are ignored — if the issue is still open, it still needs work.
-    Returns the PR HTML URL if found, else None.
+    Return the HTML URL of any open PR that references this issue, or None.
+
+    Two checks are performed in order:
+    1. Issue timeline cross-referenced events — covers PRs that use GitHub's
+       closing keywords (Fixes/Closes/Resolves #N) in their body.
+    2. Full open-PR scan — covers PRs that mention #N only in their title (e.g.
+       the format Devin uses: "Fix #N: Title") and never produce a timeline event.
     """
     owner, repo = _repo().split("/", 1)
-    url = f"{GITHUB_API}/repos/{owner}/{repo}/issues/{issue_number}/timeline"
-    params = {"per_page": 100}
+
+    # --- check 1: timeline cross-references ---
+    timeline_url = f"{GITHUB_API}/repos/{owner}/{repo}/issues/{issue_number}/timeline"
     with httpx.Client() as client:
-        resp = client.get(url, headers=_headers(), params=params)
+        resp = client.get(timeline_url, headers=_headers(), params={"per_page": 100})
         resp.raise_for_status()
     for event in resp.json():
         if event.get("event") != "cross-referenced":
             continue
-        source = event.get("source", {})
-        source_issue = source.get("issue", {})
-        pr = source_issue.get("pull_request", {})
-        if not pr:
-            continue
-        # Only count the PR if it is still open
-        if source_issue.get("state") == "open":
-            return source_issue.get("html_url")
+        source_issue = event.get("source", {}).get("issue", {})
+        if source_issue.get("pull_request") and source_issue.get("state") == "open":
+            return source_issue["html_url"]
+
+    # --- check 2: scan open PRs for title/body mention of #issue_number ---
+    prs_url = f"{GITHUB_API}/repos/{owner}/{repo}/pulls"
+    needle = f"#{issue_number}"
+    with httpx.Client() as client:
+        resp = client.get(prs_url, headers=_headers(), params={"state": "open", "per_page": 100})
+        resp.raise_for_status()
+    for pr in resp.json():
+        title = pr.get("title", "")
+        body = pr.get("body") or ""
+        if needle in title or needle in body:
+            return pr["html_url"]
+
     return None
 
 

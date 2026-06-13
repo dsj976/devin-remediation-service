@@ -67,10 +67,12 @@ def get_session(session_id: str) -> dict:
     return resp.json()
 
 
-def map_devin_status(devin_status: Optional[str]) -> str:
-    """Map Devin session status to our internal status.
+def map_devin_status(devin_status: Optional[str], status_detail: Optional[str] = None) -> str:
+    """Map Devin v3 session status to our internal status.
 
-    Devin v3 terminal statuses: 'exit' (success), 'error', 'suspended'.
+    Documented status values: new, claimed, running, exit, error, suspended, resuming.
+    When status is "running", status_detail can be "finished" — meaning the task is
+    done but the session hasn't exited yet.
     """
     if devin_status is None:
         return "running"
@@ -79,6 +81,8 @@ def map_devin_status(devin_status: Optional[str]) -> str:
         return "completed"
     if status_lower in ("error", "suspended"):
         return "failed"
+    if status_lower == "running" and status_detail == "finished":
+        return "completed"
     return "running"
 
 

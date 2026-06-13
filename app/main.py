@@ -42,15 +42,15 @@ def _process_issue(issue: dict, force_retry: bool = False) -> None:
     if current_status == "completed":
         return
 
-    # 2. Currently running → don't spawn a duplicate
-    if current_status == "running" and not force_retry:
-        return
-
-    # 3. Check GitHub for an existing PR (deduplication on restart)
+    # 2. Check GitHub for an existing open PR (covers restarts and mid-run PR detection)
     pr_url = github.find_existing_pr(number)
     if pr_url:
-        log.info("Issue #%d already has PR %s — marking completed", number, pr_url)
+        log.info("Issue #%d already has open PR %s — marking completed", number, pr_url)
         store.upsert(number, title=title, issue_url=issue_url, status="completed", pr_url=pr_url)
+        return
+
+    # 3. Currently running → don't spawn a duplicate
+    if current_status == "running" and not force_retry:
         return
 
     # 4. Create a new Devin session
@@ -105,14 +105,18 @@ async def _poll_running_sessions() -> None:
         for entry in running:
             try:
                 data = devin.get_session(entry["session_id"])
-                new_status = devin.map_devin_status(data.get("status"))
+                raw_status = data.get("status")
+                status_detail = data.get("status_detail")
+                new_status = devin.map_devin_status(raw_status, status_detail)
                 pr_url = devin.extract_pr_url(data)
+                log.info(
+                    "Poll session %s (issue #%d): devin_status=%r detail=%r → %s",
+                    entry["session_id"], entry["issue_number"], raw_status, status_detail, new_status,
+                )
+                # If Devin hasn't surfaced a PR URL yet, fall back to GitHub search
+                if not pr_url:
+                    pr_url = github.find_existing_pr(entry["issue_number"])
                 store.upsert(entry["issue_number"], status=new_status, pr_url=pr_url)
-                if new_status != "running":
-                    log.info(
-                        "Session %s for issue #%d → %s",
-                        entry["session_id"], entry["issue_number"], new_status,
-                    )
             except Exception as exc:
                 log.warning("Could not poll session %s: %s", entry["session_id"], exc)
 
