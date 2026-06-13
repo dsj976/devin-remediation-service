@@ -26,11 +26,11 @@ TEMPLATES_DIR = Path(__file__).parent / "templates"
 def _process_issue(issue: dict, force_retry: bool = False) -> None:
     """
     Decide whether to create/retry a Devin session for a single issue.
-    - completed → always skip.
-    - open PR found on GitHub → mark completed, skip.
+    - open PR found on GitHub → mark completed, skip (checked every scan so a
+      closed PR causes the issue to be re-queued on the next scan).
     - running → always skip (never duplicate).
     - failed → skip unless force_retry=True.
-    - not in store → create session.
+    - not in store, or completed with no open PR → create session.
     """
     number = issue["number"]
     title = issue["title"]
@@ -39,22 +39,19 @@ def _process_issue(issue: dict, force_retry: bool = False) -> None:
 
     current_status = store.get_status(number)
 
-    # 1. Already completed → check GitHub for PR, then skip
-    if current_status == "completed":
-        return
-
-    # 2. Check GitHub for an existing open PR (covers restarts and mid-run PR detection)
+    # 1. Check GitHub for an open PR — covers all states including previously completed
+    #    issues whose PR was subsequently closed.
     pr_url = github.find_existing_pr(number)
     if pr_url:
         log.info("Issue #%d already has open PR %s — marking completed", number, pr_url)
         store.upsert(number, title=title, issue_url=issue_url, status="completed", pr_url=pr_url)
         return
 
-    # 3. Currently running → never spawn a duplicate
+    # 2. Currently running → never spawn a duplicate
     if current_status == "running":
         return
 
-    # 4. Failed → only retry when explicitly requested
+    # 3. Failed → only retry when explicitly requested
     if current_status == "failed" and not force_retry:
         return
 
