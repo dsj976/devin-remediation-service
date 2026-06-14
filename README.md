@@ -8,7 +8,7 @@ An event-driven automation that scans a GitHub repository for issues labelled `d
 2. For each issue, it checks for an existing open PR before creating a Devin session, so restarting the service never triggers duplicate work.
 3. If no open PR exists, a Devin session is created with a structured prompt to fix the issue and open a PR.
 4. A background loop repeats the scan every `SCAN_INTERVAL_MINUTES` to pick up newly labelled issues.
-5. A separate background loop polls the Devin API every 60 seconds to update the status of running sessions. A session is marked completed when Devin reports `status: exit` or `status: running` with `status_detail: finished`; it is marked failed on `error` or `suspended`.
+5. A separate background loop polls the Devin API every 60 seconds to update the status of running sessions. A session is marked completed when Devin reports `status: exit`, `status: running` with `status_detail: finished`, or when a PR is found but the session is still finishing up; it is marked failed on `error` or `suspended`.
 6. A live dashboard at `http://localhost:8000` shows the status of all tasks.
 
 ## Quick start
