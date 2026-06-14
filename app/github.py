@@ -1,3 +1,11 @@
+"""
+GitHub REST API client for the Devin remediation service.
+
+Provides three operations used by main.py to drive the automation loop:
+- Fetching open issues tagged with the remediation label.
+- Detecting whether an open PR already exists for a given issue.
+- Posting status comments on issues when a Devin session is started.
+"""
 import os
 
 import httpx
@@ -37,8 +45,9 @@ def find_existing_pr(issue_number: int) -> str | None:
     Two checks are performed in order:
     1. Issue timeline cross-referenced events — covers PRs that use GitHub's
        closing keywords (Fixes/Closes/Resolves #N) in their body.
-    2. Full open-PR scan — covers PRs that mention #N only in their title (e.g.
-       the format Devin uses: "Fix #N: Title") and never produce a timeline event.
+    2. Full open-PR scan — covers PRs that mention #N in their title or body
+       (e.g. the format Devin is instructed to use: "Fix #N: Title"),
+       but did not produce a GitHub cross-reference event.
     """
     owner, repo = _repo().split("/", 1)
 
