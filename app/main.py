@@ -150,6 +150,9 @@ async def _poll_running_sessions() -> None:
                 # If Devin hasn't surfaced a PR URL yet, fall back to GitHub search
                 if not pr_url:
                     pr_url = github.find_existing_pr(entry["issue_number"])
+                # A PR exists but Devin hasn't exited yet — the work is done
+                if pr_url and new_status == "running":
+                    new_status = "completed"
                 store.upsert(entry["issue_number"], status=new_status, pr_url=pr_url)
             except Exception as exc:
                 log.warning("Could not poll session %s: %s", entry["session_id"], exc)
