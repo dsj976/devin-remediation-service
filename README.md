@@ -33,7 +33,7 @@ SCAN_INTERVAL_MINUTES=5
 - `DEVIN_API_KEY` — API key for Devin (starts with `cog_`), which you can generate following the instructions [here](https://docs.devin.ai/api-reference/getting-started/teams-quickstart#step-2-generate-an-api-key).
 - `DEVIN_ORG_ID` - Organization ID for Devin (starts with `org-`), which you can find under `Settings -> General` in [app.devin.ai](app.devin.ai).
 
-> **Note:** Your Devin account must be linked to the GitHub account that owns the target repository so that Devin can clone the repo and open pull requests on your behalf.
+> **Note:** Devin must be linked to a GitHub account with **write access** to the target repository so that it can open pull requests on your behalf. If the repository is private, that account also needs read access to clone it.
 
 ### 2. Run with Docker
 
