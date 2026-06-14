@@ -7,8 +7,6 @@ which run concurrently and both write to the store.
 
 import threading
 from datetime import datetime, timezone
-from typing import Dict, Optional
-
 _lock = threading.Lock()
 
 # Schema per entry:
@@ -24,7 +22,7 @@ _lock = threading.Lock()
 #   "updated_at": str (ISO),
 # }
 
-_store: Dict[int, dict] = {}  # in-memory store keyed by issue number
+_store: dict[int, dict] = {}  # in-memory store keyed by issue number
 
 
 def _now() -> str:
@@ -55,7 +53,7 @@ def upsert(issue_number: int, **kwargs) -> dict:
         return dict(entry)
 
 
-def get(issue_number: int) -> Optional[dict]:
+def get(issue_number: int) -> dict | None:
     """Retrieve the entry for the given issue number."""
     with _lock:
         entry = _store.get(issue_number)
@@ -68,7 +66,7 @@ def get_all() -> list:
         return [dict(v) for v in sorted(_store.values(), key=lambda x: x["issue_number"])]
 
 
-def get_status(issue_number: int) -> Optional[str]:
+def get_status(issue_number: int) -> str | None:
     """Return the current status of the given issue number."""
     with _lock:
         entry = _store.get(issue_number)
