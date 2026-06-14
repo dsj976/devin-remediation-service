@@ -24,14 +24,16 @@ _lock = threading.Lock()
 #   "updated_at": str (ISO),
 # }
 
-_store: Dict[int, dict] = {}
+_store: Dict[int, dict] = {}  # in-memory store keyed by issue number
 
 
 def _now() -> str:
+    """Return the current UTC time as an ISO 8601 string."""
     return datetime.now(timezone.utc).isoformat()
 
 
 def upsert(issue_number: int, **kwargs) -> dict:
+    """Insert a new entry or update an existing one for the given issue number."""
     with _lock:
         if issue_number not in _store:
             _store[issue_number] = {
@@ -54,17 +56,20 @@ def upsert(issue_number: int, **kwargs) -> dict:
 
 
 def get(issue_number: int) -> Optional[dict]:
+    """Retrieve the entry for the given issue number."""
     with _lock:
         entry = _store.get(issue_number)
         return dict(entry) if entry else None
 
 
 def get_all() -> list:
+    """Return a list of all entries in the store, sorted by issue number."""
     with _lock:
         return [dict(v) for v in sorted(_store.values(), key=lambda x: x["issue_number"])]
 
 
 def get_status(issue_number: int) -> Optional[str]:
+    """Return the current status of the given issue number."""
     with _lock:
         entry = _store.get(issue_number)
         return entry["status"] if entry else None
