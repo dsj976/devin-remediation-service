@@ -7,6 +7,7 @@ Provides the operations used by main.py to delegate issue fixes to Devin:
 - Mapping Devin's session status values to the internal status model (running, completed, failed).
 - Extracting a PR URL from a session response.
 """
+
 import os
 
 import httpx

@@ -7,6 +7,7 @@ which run concurrently and both write to the store.
 
 import threading
 from datetime import datetime, timezone
+
 _lock = threading.Lock()
 
 # Schema per store entry:
@@ -63,7 +64,9 @@ def get(issue_number: int) -> dict | None:
 def get_all() -> list:
     """Return a list of all entries in the store, sorted by issue number."""
     with _lock:
-        return [dict(v) for v in sorted(_store.values(), key=lambda x: x["issue_number"])]
+        return [
+            dict(v) for v in sorted(_store.values(), key=lambda x: x["issue_number"])
+        ]
 
 
 def get_status(issue_number: int) -> str | None:

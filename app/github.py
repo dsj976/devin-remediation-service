@@ -6,6 +6,7 @@ Provides three operations used by main.py to drive the automation loop:
 - Detecting whether an open PR already exists for a given issue.
 - Posting status comments on issues when a Devin session is started.
 """
+
 import os
 
 import httpx
@@ -69,7 +70,9 @@ def find_existing_pr(issue_number: int) -> str | None:
     prs_url = f"{GITHUB_API}/repos/{owner}/{repo}/pulls"
     needle = f"#{issue_number}"
     with httpx.Client() as client:
-        resp = client.get(prs_url, headers=_headers(), params={"state": "open", "per_page": 100})
+        resp = client.get(
+            prs_url, headers=_headers(), params={"state": "open", "per_page": 100}
+        )
         resp.raise_for_status()
     for pr in resp.json():
         title = pr.get("title", "")
