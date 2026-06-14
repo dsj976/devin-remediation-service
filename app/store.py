@@ -1,3 +1,10 @@
+"""
+In-memory store for tracking GitHub issues, their associated Devin sessions,
+and processing statuses. All mutations are guarded by a threading lock to
+prevent race conditions between the background polling and scanning tasks,
+which run concurrently and both write to the store.
+"""
+
 import threading
 from datetime import datetime, timezone
 from typing import Dict, Optional
