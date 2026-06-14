@@ -9,7 +9,7 @@ import threading
 from datetime import datetime, timezone
 _lock = threading.Lock()
 
-# Schema per entry:
+# Schema per store entry:
 # {
 #   "issue_number": int,
 #   "title": str,
