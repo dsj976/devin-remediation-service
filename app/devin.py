@@ -1,5 +1,4 @@
 import os
-from typing import Optional
 
 import httpx
 
@@ -69,7 +68,7 @@ def get_session(session_id: str) -> dict:
     return resp.json()
 
 
-def map_devin_status(devin_status: Optional[str], status_detail: Optional[str] = None) -> str:
+def map_devin_status(devin_status: str | None, status_detail: str | None = None) -> str:
     """Map Devin v3 session status to our internal status.
 
     Documented status values: new, claimed, running, exit, error, suspended, resuming.
@@ -88,7 +87,7 @@ def map_devin_status(devin_status: Optional[str], status_detail: Optional[str] =
     return "running"
 
 
-def extract_pr_url(session_data: dict) -> Optional[str]:
+def extract_pr_url(session_data: dict) -> str | None:
     """Extract the first PR URL from a session response's pull_requests list."""
     prs = session_data.get("pull_requests") or []
     if prs:
