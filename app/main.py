@@ -1,3 +1,15 @@
+"""
+FastAPI application and entry point for the Devin remediation service.
+
+On startup, runs an immediate GitHub issue scan and launches two background loops:
+one that re-scans for new labeled issues on a configurable interval, and one that
+polls running Devin sessions every 60 seconds to update their status and PR URL.
+
+Exposes three routes:
+- GET  /        — HTML dashboard showing the current state of all tracked issues.
+- GET  /status  — JSON list of all tracked issues (polled by the dashboard).
+- POST /scan    — Manually trigger a scan; pass force_retry=true to retry failed sessions.
+"""
 import asyncio
 import logging
 import os
@@ -42,7 +54,7 @@ def _process_issue(issue: dict, force_retry: bool = False) -> None:
     current_status = store.get_status(number)
 
     # 1. Check GitHub for an open PR — covers all states including previously completed
-    #    issues whose PR was subsequently closed.
+    # issues whose PR was subsequently closed.
     pr_url = github.find_existing_pr(number)
     if pr_url:
         log.info("Issue #%d already has open PR %s — marking completed", number, pr_url)
@@ -57,7 +69,7 @@ def _process_issue(issue: dict, force_retry: bool = False) -> None:
     if current_status == "failed" and not force_retry:
         return
 
-    # 5. Create a new Devin session
+    # 5. Create a new Devin session, posting a comment on the issue with the session URL.
     log.info("Creating Devin session for issue #%d: %s", number, title)
     store.upsert(number, title=title, issue_url=issue_url, status="running")
     try:
@@ -79,9 +91,9 @@ def _process_issue(issue: dict, force_retry: bool = False) -> None:
 
 
 def scan_and_process(force_retry: bool = False) -> dict:
-    """
-    Fetch labeled issues from GitHub and process each one.
-    Returns a summary dict.
+    """Fetch labeled issues from GitHub, and process each one
+    according to its current state in the store and whether
+    force_retry is requested.
     """
     log.info("Starting issue scan (force_retry=%s)", force_retry)
     try:
@@ -102,7 +114,12 @@ def scan_and_process(force_retry: bool = False) -> dict:
 # ---------------------------------------------------------------------------
 
 async def _poll_running_sessions() -> None:
-    """Periodically update status of running Devin sessions."""
+    """
+    Background loop that polls Devin every 60 seconds for all sessions currently
+    marked as running in the store. For each one, fetches the latest session state,
+    maps it to the internal status model, and updates the store. If Devin's response
+    doesn't include a PR URL yet, falls back to searching GitHub directly.
+    """
     while True:
         await asyncio.sleep(60)
         running = [e for e in store.get_all() if e["status"] == "running" and e["session_id"]]
@@ -130,6 +147,11 @@ async def _poll_running_sessions() -> None:
 # ---------------------------------------------------------------------------
 
 async def _periodic_scan() -> None:
+    """
+    Background loop that triggers an issue scan every SCAN_INTERVAL seconds.
+    This ensures that new issues are picked up and processed even if no one manually
+    triggers a scan via the /scan endpoint.
+    """
     while True:
         await asyncio.sleep(SCAN_INTERVAL)
         log.info("Periodic scan triggered")
