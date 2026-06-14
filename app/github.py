@@ -28,6 +28,8 @@ def _repo() -> str:
 
 def get_labeled_issues() -> list[dict]:
     """Return all open issues tagged with LABEL."""
+    # See GitHub API docs:
+    # https://docs.github.com/en/rest/issues/issues?apiVersion=2026-03-10#list-repository-issues
     url = f"{GITHUB_API}/repos/{_repo()}/issues"
     params = {"labels": LABEL, "state": "open", "per_page": 100}
     with httpx.Client() as client:

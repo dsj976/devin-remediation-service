@@ -25,13 +25,15 @@ TEMPLATES_DIR = Path(__file__).parent / "templates"
 
 def _process_issue(issue: dict, force_retry: bool = False) -> None:
     """
-    Decide whether to create/retry a Devin session for a single issue.
+    Decide whether to create/retry a Devin session for a single GitHub issue.
     - open PR found on GitHub → mark completed, skip (checked every scan so a
       closed PR causes the issue to be re-queued on the next scan).
     - running → always skip (never duplicate).
     - failed → skip unless force_retry=True.
     - not in store, or completed with no open PR → create session.
     """
+    # for valid keys in response, check GitHub API docs:
+    # https://docs.github.com/en/rest/issues/issues?apiVersion=2026-03-10#list-repository-issues
     number = issue["number"]
     title = issue["title"]
     body = issue.get("body") or ""
