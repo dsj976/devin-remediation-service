@@ -1,3 +1,12 @@
+"""
+Devin API v3 client for the remediation service.
+
+Provides the operations used by main.py to delegate issue fixes to Devin:
+- Creating a session from a structured prompt built around a GitHub issue.
+- Fetching the current state of a running session.
+- Mapping Devin's session status values to the internal status model (running, completed, failed).
+- Extracting a PR URL from a session response.
+"""
 import os
 
 import httpx
@@ -69,7 +78,7 @@ def get_session(session_id: str) -> dict:
 
 
 def map_devin_status(devin_status: str | None, status_detail: str | None = None) -> str:
-    """Map Devin v3 session status to our internal status.
+    """Map Devin v3 session status to our internal status: running, completed, or failed.
 
     Documented status values: new, claimed, running, exit, error, suspended, resuming.
     When status is "running", status_detail can be "finished" — meaning the task is
