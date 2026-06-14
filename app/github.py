@@ -1,5 +1,4 @@
 import os
-from typing import List, Optional
 
 import httpx
 
@@ -19,7 +18,7 @@ def _repo() -> str:
     return os.environ["GITHUB_REPO"]
 
 
-def get_labeled_issues() -> List[dict]:
+def get_labeled_issues() -> list[dict]:
     """Return all open issues tagged with LABEL."""
     url = f"{GITHUB_API}/repos/{_repo()}/issues"
     params = {"labels": LABEL, "state": "open", "per_page": 100}
@@ -31,7 +30,7 @@ def get_labeled_issues() -> List[dict]:
     return [i for i in issues if "pull_request" not in i]
 
 
-def find_existing_pr(issue_number: int) -> Optional[str]:
+def find_existing_pr(issue_number: int) -> str | None:
     """
     Return the HTML URL of any open PR that references this issue, or None.
 
