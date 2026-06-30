@@ -61,6 +61,12 @@ def get(issue_number: int) -> dict | None:
         return dict(entry) if entry else None
 
 
+def clear() -> None:
+    """Remove all entries from the store."""
+    with _lock:
+        _store.clear()
+
+
 def get_all() -> list:
     """Return a list of all entries in the store, sorted by issue number."""
     with _lock:
