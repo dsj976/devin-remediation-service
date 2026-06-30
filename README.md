@@ -49,6 +49,18 @@ A background loop will scan every `SCAN_INTERVAL_MINUTES` to pick up newly label
 You can also trigger a manual scan by using the **Scan Issues** button in the dashboard.
 If a Devin session fails, you can retry it by clicking the **Retry Failed** button.
 
+## Development with uv
+
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run the following commands in the project root:
+
+```bash
+uv sync
+uv run pytest
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+`uv sync` installs the runtime dependencies and the `dev` dependency group (which includes the test tools). `uv run pytest` runs the test suite, and `uv run uvicorn app.main:app` starts the local dashboard at **http://localhost:8000**.
+
 ## Architecture decisions
 
 **Stack.** FastAPI + uvicorn for the API server, httpx for HTTP calls to the GitHub and Devin APIs, python-dotenv for configuration. Dependencies are intentionally minimal — no ORM, no task queue, no database.
@@ -71,7 +83,8 @@ app/
     └── index.html  # Dashboard
 Dockerfile
 docker-compose.yml
-requirements.txt
+pyproject.toml
+uv.lock
 .env.example
 ```
 
